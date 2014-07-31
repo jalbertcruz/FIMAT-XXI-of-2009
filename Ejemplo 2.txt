@@ -1,0 +1,6 @@
+
+puerta.abrir;
+
+puerta.cerrar;
+
+robot.abrirPuerta (puerta);

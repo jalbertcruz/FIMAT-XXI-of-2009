@@ -1,0 +1,109 @@
+
+group JRubyAppTemplate;
+
+parametro()::= <<
+    <it>
+>>
+
+rubyApp(confs) ::= <<
+
+# Dir["/some/path/*.jar"].each { |jar| require jar }
+
+include_class "gui.MainGUI"
+include_class "game.Direccion"
+
+include_class("java.lang.Thread") {|pkg,name| 'J' + name}
+
+<confs.Configuraciones:{obj|   
+include_class("<obj.FullClassName>") {|pkg,name| 'J' + name}
+}>
+
+class ClickAction 
+  include java.awt.event.ActionListener
+
+  def initialize &block
+    @block = block; 
+  end 
+
+  def actionPerformed evt
+    @block.call evt
+  end
+end
+
+<confs.Configuraciones:{obj|   
+
+class <obj.ClassName> \< J<obj.ClassName> 
+
+    def initialize context<obj.ParamsNameProposals:{n | , <n>}>
+       super <obj.ParamsNameProposals:parametro(); separator=", ">
+       @context   = context
+       @oldValues = {}
+       @oldValues['fila']    = fila
+       @oldValues['columna'] = columna
+    end
+
+    def locationChange?
+        return ((@oldValues['fila'] != fila) || (@oldValues['columna'] != columna))
+    end
+
+  # Conjunto de metodos
+<obj.ActionMethods:{m|   def <m.name> <m.ParametersNames:parametro(); separator=", ">
+    @oldValues['fila'] = fila
+    @oldValues['columna'] = columna
+    if (<m.Requires:parametro(); separator=" and ">)
+        super <m.ParametersNames:parametro(); separator=", ">
+        if locationChange?
+            @context['gui'].sincronizarLogica_GUI( [@oldValues['fila'], @oldValues['columna'], fila, columna] )
+        else
+            @context['gui'].sincronizarLogica_GUI( [fila, columna] )
+        end
+        JThread.sleep @context['gui'].getFrameInterval
+    else
+        puts 'Error in ' + fila.to_s + ' : ' + columna.to_s + ' => ' + @context['tablero'].msg
+    end
+  end 
+
+}>
+end
+}>
+
+
+class JRMainGUI \< MainGUI
+  
+  def initialize
+    super
+    setEvents
+  end
+  
+private
+  def setEvents
+    meth = ClickAction.new do #|evt|
+      toFront
+      instance_eval getRubySrc
+    end
+    addSrcActionListener meth
+  end
+end
+
+gui = JRMainGUI.new 
+r = Robot.new( gui.context, 1, 2, Direccion::Este )
+p = Puerta.new( gui.context, 7, 8 )
+gui.robot  = r
+gui.puerta = p
+
+for i in (1..6)
+  gui.setLadrillo i, 8
+end
+
+for i in (1..3)
+  gui.setLadrillo i, 5
+end
+
+for i in (8..12)
+  gui.setLadrillo i, 8
+end
+
+gui.saveState
+
+gui.visible = true
+>>
